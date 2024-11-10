@@ -1,0 +1,149 @@
+<html>
+<head>
+<title>Hamming</title>
+</head>
+<body>
+<h1>Hamming encoding and decoding</h1>
+<input type="edit" id="sender" onkeypress="Filter();" placeholder="Введите сообщение"/>
+<input type=button id=send onclick="mainEncode();" value="Encode"/><BR>
+<input type="edit" id="channel" onkeypress="Filter();" placeholder="Закодированное сообщение"/>
+<input type=button id=recieve onclick="mainDecode();" value="Decode"/><BR>
+<input type="edit" id="reciever" readonly placeholder="Декодированное сообщение"/>
+<input type="text" id="error"/>
+</body>
+<script> 
+function Filter()
+{
+    var filter = "01";
+    window.event.returnValue = (filter.indexOf(String.fromCharCode(window.event.keyCode)) != -1);
+}
+function xorPositions(unitPositions) 
+{
+    var maxZero = unitPositions[unitPositions.length - 1].length; 
+
+    for (var i = 0; i < unitPositions.length; i++) 
+        {
+            missingZero = maxZero - unitPositions[i].length;
+            while (missingZero > 0) 
+            {
+                unitPositions[i] = '0' + unitPositions[i];
+                missingZero--;
+            }
+        }
+    maxZero--;
+    var checkSum = ''; 
+    while(maxZero >= 0) 
+    {
+        var rankSum = 0; 
+        for (var i = 0; i < unitPositions.length; i++) 
+            {
+                rankSum += Number(unitPositions[i].charAt(maxZero));
+            }
+        checkSum = rankSum % 2 + checkSum; 
+        maxZero--;
+    }
+    return checkSum;
+}
+
+function findCheckSum(strFindUnit)
+{
+    var unitPositions = new Array();
+    for (var i = strFindUnit.length - 1; i >= 0; i--)
+    {
+        if (strFindUnit.charAt(i) == '1') { unitPositions.push(Math.abs(i - strFindUnit.length).toString(2)); }
+    }
+    return xorPositions(unitPositions);
+}
+
+function encode(string)
+{
+    var s_len = string.length;
+    var hemmingStr = '*';
+    var degree = 1; 
+    var i = s_len - 1;
+    var position = 1; 
+
+    while (i >= 0)
+    {
+        position++; 
+        if (Math.pow(position, 1/degree) == 2) 
+            {
+                hemmingStr = '*' + hemmingStr;
+                degree++;
+            }
+        else 
+        {
+            hemmingStr = string.charAt(i) + hemmingStr;
+            i--;
+        }
+    }
+
+    var checkSum = findCheckSum(hemmingStr) 
+    for (var i = 0, j = 0; i < hemmingStr.length; i++)
+        {
+            if (hemmingStr.charAt(i) == '*')
+            {
+                hemmingStr = hemmingStr.substring(0, i) + checkSum.charAt(j) + hemmingStr.substring(i + 1);
+                j++;
+            }
+        }
+    return hemmingStr;
+}
+
+function decode(encodedStr)
+{
+    encodedStr_len = encodedStr.length;
+    decodedStr = "";
+    var degree = 1; 
+    var position = 1; 
+
+    while (position <= encodedStr_len)
+    {
+        position++;
+        if (!(Math.pow(position, 1/degree) == 2)) 
+        {
+            decodedStr = encodedStr.charAt(encodedStr_len - position) + decodedStr
+        }
+        else degree++;
+    }
+    return decodedStr;
+}
+
+function checkError(isErrorStr)
+{
+    var checkSum = findCheckSum(isErrorStr);
+    if (checkSum == 0)
+    {
+        dec = decode(isErrorStr) + "*Message encoded successfully."
+    }
+    else
+        {
+            var errorInx = isErrorStr.length - parseInt(checkSum, 2);
+            if (isErrorStr.charAt(errorInx) == 1) isErrorStr = isErrorStr.substring(0, errorInx) + '0' + isErrorStr.substring(errorInx + 1);
+            else isErrorStr = isErrorStr.substring(0, errorInx) + '1' + isErrorStr.substring(errorInx + 1);
+            if (findCheckSum(isErrorStr) == 0)
+            {
+                dec = decode(isErrorStr) + "*Message encoded successfully. Error number: " + parseInt(checkSum, 2); 
+            }
+            else
+            {
+                dec = "Error" + "*The message cannot be decoded";
+            }
+        }
+    return dec;
+}
+
+function mainEncode()
+{
+    var strForEncode = encode(sender.value)
+    channel.value = strForEncode;
+}
+
+function mainDecode()
+{
+    var strForDecode = checkError(channel.value);
+    reciever.value = strForDecode.split('*')[0];
+    error.value = strForDecode.split('*')[1];
+}
+</script>
+</html>
